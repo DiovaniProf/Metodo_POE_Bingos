@@ -1,0 +1,162 @@
+/* Bingo Inteligente V2 — Projeção em tela cheia.
+   Exclusivo do #presentation: sem sobrescrever painéis do modo normal. */
+#presentation { display: none; }
+#presentation[hidden], #presentation [hidden] { display: none !important; }
+#presentation:fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100%; height: 100%; min-width: 0; min-height: 0;
+  padding: clamp(10px,1.4vw,24px);
+  margin: 0; overflow: hidden;
+  color: #eef8ff; background: #07172c;
+  background-image: radial-gradient(ellipse at 70% 0%,#113d60 0,transparent 48%),
+                    radial-gradient(ellipse at 0% 95%,#0f344b 0,transparent 45%);
+}
+#presentation .presentation-shell { display: flex; flex: 1; flex-direction: column; gap: clamp(10px,1vw,17px); min-height: 0; }
+#presentation .presentation-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex: 0 0 auto; }
+#presentation .fs-btn {
+  min-height: clamp(52px,6.7vh,76px); padding: 10px clamp(15px,2.5vw,36px);
+  border-radius: 14px; border: 1px solid #386a9b;
+  font-size: clamp(14px,1.6vw,26px); font-weight: 850;
+  letter-spacing: .025em; line-height: 1.15;
+  box-shadow: 0 6px 20px #0005;
+  transition: transform .12s,background .15s,border-color .15s;
+}
+#presentation .fs-btn:enabled:hover { transform: translateY(-1px); }
+#presentation .fs-btn:focus-visible,#presentation .fs-close:focus-visible,#presentation .fs-back:focus-visible,
+#presentation .fs-player:focus-visible { outline: 3px solid #9cf1ff; outline-offset: 4px; }
+#presentation .fs-btn-draw { flex: 1 1 60%; color: #071d35; background: linear-gradient(160deg,#66e4ff,#13a6e8); border-color: #70e4ff; }
+#presentation .fs-btn-draw:enabled:hover { background: linear-gradient(160deg,#9ff2ff,#40cafa); }
+#presentation .fs-btn-overview { flex: 0 1 40%; color: #ebf7ff; background: #123d6b; border-color: #4589c3; }
+#presentation .fs-btn-overview:hover { background: #195383; }
+#presentation .fs-matrix-scroll {
+  flex: 1 1 auto; min-height: 0; min-width: 0;
+  overflow: auto; overscroll-behavior: contain;
+  border: 1px solid #2d5781; border-radius: 17px;
+  background: #07192ec4; padding: clamp(7px,1vw,18px);
+  scrollbar-color: #4079a4 #0c2340;
+}
+#presentation .fs-matrix-grid {
+  gap: clamp(3px,.65vw,12px);
+  height: 100%; min-height: 100%; align-content: stretch;
+  grid-template-rows: repeat(var(--fs-rows, 10),minmax(54px,1fr));
+}
+#presentation .fs-matrix-grid .stone {
+  min-height: 0; height: 100%; padding: 8px 9px 5px;
+  border-radius: clamp(5px,.6vw,13px);
+  box-shadow: inset 0 1px #a3d5ff44;
+}
+#presentation .fs-matrix-grid .stone-label {
+  line-height: 1.1; max-width: 100%; max-height: 100%;
+  overflow-wrap: anywhere; word-break: normal;
+}
+#presentation .fs-matrix-grid .stone-index { top: 5px; left: 7px; font-size: clamp(7px,.65vw,11px); }
+/* Painel deslizante aberto sob demanda. Na projeção fechada, não há indicadores ou controles extras. */
+#presentation .fs-overlay {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; justify-content: center; align-items: stretch;
+  padding: clamp(10px,2vw,30px);
+  background: #020b18e8;
+  backdrop-filter: blur(8px);
+}
+#presentation .fs-overlay-panel {
+  display: flex; flex-direction: column; gap: 0;
+  width: 100%; max-width: 1700px; min-height: 0; overflow: hidden;
+  border: 1px solid #416b93; border-radius: 17px;
+  background: linear-gradient(130deg,#112946,#0a1e35);
+  box-shadow: 0 20px 80px #000a;
+}
+#presentation .fs-overlay-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: clamp(14px,1.6vw,24px);
+  border-bottom: 1px solid #35516b;
+}
+#presentation .fs-overlay-head h2 { font-size: clamp(17px,2.1vw,31px); margin: 0; }
+#presentation .fs-close,#presentation .fs-back {
+  cursor: pointer; color: #fff; font-size: clamp(13px,1.3vw,19px); font-weight: 750;
+  border: 1px solid #4e779a; border-radius: 10px; padding: 12px 16px; background: #1b4167;
+}
+#presentation .fs-close:hover,#presentation .fs-back:hover { background: #255780; }
+#presentation .fs-overview-grid {
+  display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,.85fr);
+  gap: clamp(12px,2vw,26px); padding: clamp(12px,2vw,26px);
+  min-height: 0; flex: 1;
+}
+#presentation .fs-overview-col {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid #2c4b6b; border-radius: 13px;
+  background: #0b203a; overflow: hidden;
+}
+#presentation .fs-col-head {
+  display: flex; justify-content: space-between; gap: 15px; align-items: center;
+  border-bottom: 1px solid #2e526e; padding: 14px 18px;
+}
+#presentation .fs-col-head h3 { font-size: clamp(15px,1.5vw,22px); margin: 0; }
+#presentation .fs-col-head span { color: #b3cde5; white-space: nowrap; font-size: clamp(12px,.95vw,15px); }
+#presentation .fs-list {
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0; overflow-y: auto; padding: 14px;
+  scrollbar-color: #3e7097 #0d233c;
+}
+#presentation .fs-player {
+  display: flex; flex-direction: column; gap: 9px;
+  flex: 0 0 auto; width: 100%; text-align: left;
+  padding: clamp(12px,1.15vw,17px); cursor: pointer;
+  background: #183759; border: 1px solid #416384; border-radius: 12px; color: #f0f8ff;
+}
+#presentation .fs-player:hover { background: #204668; border-color: #64b9ef; }
+#presentation .fs-player.winner { background: #534422; border-color: #e7c154; }
+#presentation .fs-player-header,
+#presentation .fs-player-label { display: flex; gap: 12px; align-items: center; min-width: 0; }
+#presentation .fs-player-header { justify-content: space-between; font-size: clamp(14px,1.22vw,19px); }
+#presentation .fs-player-label strong { overflow-wrap: anywhere; }
+#presentation .fs-rank { display: inline-grid; place-items: center; min-width: 38px; min-height: 31px; border-radius: 7px; background: #255789; color: #d3efff; font-weight: 850; }
+#presentation .winner .fs-rank { background: #f2cc56; color: #1b2c42; }
+#presentation .fs-progress-track { width: 100%; height: clamp(11px,1vw,17px); background: #091b2d; border-radius: 30px; overflow: hidden; }
+#presentation .fs-progress-bar { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#08ace4,#55e4cb); }
+#presentation .winner .fs-progress-bar { background: linear-gradient(90deg,#e6a82c,#ffdd64); }
+#presentation .fs-player-footer { color: #b3d0e4; font-size: clamp(12px,1vw,15px); }
+#presentation .winner .fs-player-footer { color: #ffdf86; }
+#presentation .fs-history-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 15px; border: 1px solid #375576; background: #163557;
+  border-radius: 11px; font-size: clamp(14px,1.25vw,20px);
+}
+#presentation .fs-history-item span { overflow-wrap: anywhere; }
+#presentation .fs-history-item b { color: #add8fa; white-space: nowrap; }
+#presentation .fs-history-item.is-latest { background: #554723; border-color: #f4ce50; }
+#presentation .fs-history-item.is-latest b,
+#presentation .fs-history-item.is-latest span { color: #ffe17f; }
+#presentation .fs-empty { padding: 25px 16px; color: #aac3dc; font-size: 16px; line-height: 1.5; }
+#presentation .fs-detail {
+  display: flex; flex-direction: column; flex: 1; min-height: 0;
+  padding: 18px clamp(14px,2vw,28px) 26px;
+}
+#presentation .fs-detail-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+#presentation .fs-detail-bar h3 { margin: 0; font-size: clamp(17px,1.7vw,28px); }
+#presentation .fs-detail-bar span { margin-left: auto; font-size: clamp(13px,1.5vw,23px); font-weight: 750; color: #9ddcff; }
+#presentation .fs-detail-scroll { flex: 1; min-height: 0; overflow: auto; padding: 8px; }
+#presentation .fs-detail-grid { display: grid; gap: 9px; align-content: start; grid-auto-rows: minmax(80px,auto); }
+#presentation .fs-detail-stone {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 80px; padding: 11px; overflow-wrap: anywhere;
+  border: 1px solid #4473ae; border-radius: 12px;
+  background: #15519a; font-weight: 800;
+}
+#presentation .fs-detail-stone.matched { background: #14865b; border-color: #41cf92; }
+#presentation .fs-detail-stone.is-last { color: #172943; background: #f3cd52; border-color: #ffe18e; }
+#presentation .fs-detail-stone.unknown { background: #6e3f3d; border-color: #ad635d; }
+#presentation .fs-detail-stone.is-empty { opacity: .35; border-style: dashed; background: #0b2848; }
+@media(max-width:850px) {
+  #presentation:fullscreen { padding: 8px; }
+  #presentation .presentation-actions { gap: 8px; }
+  #presentation .fs-btn { min-height: 53px; padding: 9px; border-radius: 9px; font-size: clamp(12px,2.4vw,20px); }
+  #presentation .fs-matrix-scroll { padding: 6px; }
+  #presentation .fs-matrix-grid { gap: 4px; grid-template-rows: repeat(var(--fs-rows,10),minmax(48px,1fr)); }
+  #presentation .fs-overview-grid { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: 9px; }
+  #presentation .fs-overlay-head { padding: 11px; }
+  #presentation .fs-close { padding: 9px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  #presentation *, #presentation *::before, #presentation *::after { transition: none !important; }
+}

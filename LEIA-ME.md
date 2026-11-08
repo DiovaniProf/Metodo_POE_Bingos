@@ -1,6 +1,22 @@
-# BINGO INTELIGENTE — versão web 1.0
+# BINGO INTELIGENTE — versão web 2.0
 
 Aplicação educacional com **HTML, CSS e JavaScript**, sem necessidade de Python, banco de dados ou internet para executar. A biblioteca **JSZip** (incluída em `vendor/`) lê arquivos Excel `.xlsx` diretamente no navegador.
+
+## Novidade da versão 2.0 — projeção em tela cheia
+
+Na tela normal, configure a matriz, importe as cartelas dos estudantes e escolha a regra de sorteio. Em seguida, clique em **⛶ Tela cheia** no canto superior direito.
+
+Durante a projeção, aparecem **apenas**:
+
+- O botão **✦ SORTEAR**;
+- A **cartela matriz** (com as cores azul/verde/amarelo);
+- O botão **PARTICIPANTES E HISTÓRICO**.
+
+O botão de acompanhamento abre um painel sobre a própria tela cheia, mostrando **barras de progresso, posições, acertos e histórico de pedras sorteadas**, sem sair da projeção. Clique no nome do estudante para visualizar a cartela individual; use **Voltar à classificação** e **Fechar** para retornar à matriz. Pressione **Esc** para sair da tela cheia e acessar configurações, exportação e reinício.
+
+A matriz permanece com as dimensões escolhidas na tela normal. Se forem configuradas muitas linhas para a resolução da tela, a matriz terá rolagem interna em vez de ocultar pedras. O layout de projeção foi testado em Chromium em tela 1366×768.
+
+A pasta `modelos/` inclui também `matriz_estados_e_capitais.xlsx` e `.csv`, com 15 pares de estados brasileiros e capitais.
 
 ## 1. Como iniciar
 

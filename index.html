@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#081428">
   <title>Bingo Inteligente — Matriz e Cartelas</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="fullscreen.css">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -121,6 +122,40 @@
       </div>
     </aside>
   </main>
+  <!-- Área de projeção: completamente independente do painel de configurações. -->
+  <section id="presentation" class="presentation" aria-label="Bingo em tela cheia">
+    <div class="presentation-shell">
+      <div class="presentation-actions">
+        <button class="fs-btn fs-btn-draw" id="fsDraw" type="button">✦ SORTEAR</button>
+        <button class="fs-btn fs-btn-overview" id="fsOverview" type="button">▤ PARTICIPANTES E HISTÓRICO</button>
+      </div>
+      <div class="fs-matrix-scroll" id="fsMatrixScroll">
+        <div class="matrix-grid fs-matrix-grid" id="fsMatrixGrid" aria-label="Cartela matriz projetada"></div>
+      </div>
+    </div>
+    <div class="fs-overlay" id="fsOverlay" hidden>
+      <div class="fs-overlay-panel">
+        <div class="fs-overlay-head">
+          <h2>Participantes e histórico</h2>
+          <button class="fs-close" id="fsCloseOverview" type="button" aria-label="Fechar acompanhamento">✕ Fechar</button>
+        </div>
+        <div class="fs-overview-grid" id="fsOverviewGrid">
+          <section class="fs-overview-col" aria-label="Progresso dos participantes">
+            <div class="fs-col-head"><h3>Progresso dos participantes</h3><span id="fsPlayersCount">0 participantes</span></div>
+            <div class="fs-list" id="fsPlayersList"></div>
+          </section>
+          <section class="fs-overview-col" aria-label="Histórico de sorteios">
+            <div class="fs-col-head"><h3>Pedras sorteadas</h3><span id="fsHistoryCount">0 pedras</span></div>
+            <div class="fs-list" id="fsHistoryList"></div>
+          </section>
+        </div>
+        <section class="fs-detail" id="fsDetail" hidden aria-label="Cartela do participante">
+          <div class="fs-detail-bar"><button class="fs-back" id="fsBackDetail" type="button">← Voltar à classificação</button><h3 id="fsDetailName"></h3><span id="fsDetailProgress"></span></div>
+          <div class="fs-detail-scroll"><div class="fs-detail-grid" id="fsDetailGrid"></div></div>
+        </section>
+      </div>
+    </div>
+  </section>
   <footer class="page-footer">BINGO INTELIGENTE <span>•</span> A atividade funciona localmente no navegador. Os dados dos alunos não são enviados a servidores.</footer>
 
   <dialog class="modal" id="playerDialog" aria-labelledby="dialogTitle">

@@ -53,24 +53,28 @@ function render(){
  $('statLast').textContent=last?.text||'—';
  $('currentStone').textContent=last?.text||'Aguardando o primeiro sorteio';
  $('btnDraw').disabled=state.draws.length>=state.items.length;
+ $('fsDraw').disabled=state.draws.length>=state.items.length;
  let next='';
  if(state.draws.length>=state.items.length)next='Todas as pedras foram sorteadas.';
  else if(state.queue.length)next='Próxima pedra vinculada: '+(state.items.find(it=>it.id===state.queue[0])?.text||'');
  else next=state.mode==='groups'?'Próximo sorteio inicia um novo grupo aleatório':'Próxima pedra será escolhida aleatoriamente';
  $('queueMessage').textContent=next;
- renderMatrix();renderHistory();renderPlayers(s);
+ renderMatrix();renderHistory();renderPlayers(s);renderFullscreenOverview(s);
  save();
 }
 function renderMatrix(){
- const el=$('matrixGrid'),drawn=new Set(state.draws),last=state.draws.at(-1),slots=state.gridRows*state.gridCols;
- el.style.gridTemplateColumns=`repeat(${state.gridCols}, minmax(0,1fr))`;
- // Usa altura fluida de acordo com o maior texto da linha, mantendo ao menos 67 px.
- el.innerHTML=Array.from({length:slots},(_,i)=>{
+ const drawn=new Set(state.draws),last=state.draws.at(-1),slots=state.gridRows*state.gridCols;
+ const cells=Array.from({length:slots},(_,i)=>{
   const it=state.items[i];
   if(!it)return '<div class="stone stone-empty" aria-hidden="true"></div>';
   const className=it.id===last?'is-last':drawn.has(it.id)?'is-drawn':'';
   return `<div class="stone ${className}" title="${esc(it.text)}"><span class="stone-index">${String(i+1).padStart(2,'0')}</span><span class="stone-label">${esc(it.text)}</span></div>`;
  }).join('');
+ for(const id of ['matrixGrid','fsMatrixGrid']){
+  const grid=$(id);grid.style.gridTemplateColumns=`repeat(${state.gridCols}, minmax(0,1fr))`;
+  grid.innerHTML=cells;
+ }
+ $('fsMatrixGrid').style.setProperty('--fs-rows',state.gridRows);
  const groups=new Set(state.items.map(x=>x.group));
  $('matrixDetails').textContent=`${state.items.length} pedras • ${state.mode==='groups'?groups.size+' grupos':'sorteios individuais'}`;
  requestAnimationFrame(fitStoneText);
@@ -90,25 +94,32 @@ function estimateLines(ctx,text,maxWidth){
 const measureCanvas=document.createElement('canvas');const measure=measureCanvas.getContext('2d');
 function fitStoneText(){
  if(!measure)return;
- const cells=$('matrixGrid').querySelectorAll('.stone:not(.stone-empty)');
- // A altura de cada linha cresce quando uma palavra ou frase precisa de mais espaço.
- cells.forEach(cell=>{
-  const t=cell.querySelector('.stone-label');if(!t)return;
-  const width=Math.max(cell.clientWidth-14,15);
-  measure.font='800 11px system-ui';
-  const minimum=estimateLines(measure,t.textContent,width)*11*1.15+22;
-  cell.style.minHeight=Math.max(67,Math.ceil(minimum))+'px';
- });
- cells.forEach(cell=>{
-  const t=cell.querySelector('.stone-label');if(!t)return;
-  const width=cell.clientWidth-14,height=cell.clientHeight-20;
-  let lo=9,hi=Math.min(22,Math.round(width/6)+9);
-  while(lo<hi){const mid=Math.ceil((lo+hi)/2);measure.font=`800 ${mid}px system-ui`;
-   const lines=estimateLines(measure,t.textContent,Math.max(width,15));
-   if(lines*mid*1.12<=height)lo=mid;else hi=mid-1;
+ const isPresentation=document.fullscreenElement===$('presentation');
+ const grids=[$('matrixGrid'),...(isPresentation?[$('fsMatrixGrid')]:[])];
+ for(const grid of grids){
+  const projection=grid.id==='fsMatrixGrid';
+  const cells=grid.querySelectorAll('.stone:not(.stone-empty)');
+  if(!projection){
+   cells.forEach(cell=>{
+    const t=cell.querySelector('.stone-label');if(!t)return;
+    const width=Math.max(cell.clientWidth-14,15);
+    measure.font='800 11px system-ui';
+    const minimum=estimateLines(measure,t.textContent,width)*11*1.15+22;
+    cell.style.minHeight=Math.max(67,Math.ceil(minimum))+'px';
+   });
   }
-  t.style.fontSize=lo+'px';
- });
+  cells.forEach(cell=>{
+   const t=cell.querySelector('.stone-label');if(!t)return;
+   const width=Math.max(cell.clientWidth-(projection?20:14),15);
+   const height=Math.max(cell.clientHeight-(projection?15:20),16);
+   let lo=projection?10:9,hi=projection?Math.min(46,Math.round(width/5)+12):Math.min(22,Math.round(width/6)+9);
+   while(lo<hi){const mid=Math.ceil((lo+hi)/2);measure.font=`800 ${mid}px system-ui`;
+    const lines=estimateLines(measure,t.textContent,width);
+    if(lines*mid*1.12<=height)lo=mid;else hi=mid-1;
+   }
+   t.style.fontSize=lo+'px';
+  });
+ }
 }
 function renderHistory(){
  const map=new Map(state.items.map(x=>[x.id,x]));
@@ -131,6 +142,75 @@ function renderPlayers(scores){
    <div class="player-caption"><span>${esc(label)}</span><span>${Math.round(p.percent)}%</span></div>
   </div>`;
  }).join(''):'<div class="empty-state">'+(state.players.length?'Nenhum participante encontrado.':'Importe a planilha para acompanhar cada cartela automaticamente.')+'</div>';
+}
+function renderFullscreenOverview(scores){
+ $('fsPlayersCount').textContent=`${state.players.length} ${state.players.length===1?'participante':'participantes'}`;
+ $('fsHistoryCount').textContent=`${state.draws.length} ${state.draws.length===1?'pedra':'pedras'}`;
+ $('fsPlayersList').innerHTML=scores.length?scores.map(p=>{
+  const extra=p.complete?`Concluída no ${p.finishedAt}º sorteio`:
+   p.unknown.length?`${p.unknown.length} pedra(s) fora da matriz`:`${Math.round(p.percent)}% preenchida`;
+  return `<button class="fs-player ${p.complete?'winner':''}" type="button" data-fs-player="${p.index}" aria-label="Abrir cartela de ${esc(p.name)}">
+   <span class="fs-player-header"><span class="fs-player-label"><span class="fs-rank">${p.rank}º</span><strong>${esc(p.name)}</strong></span><b>${p.matched}/${p.total}</b></span>
+   <span class="fs-progress-track"><span class="fs-progress-bar" style="width:${p.percent.toFixed(2)}%"></span></span>
+   <span class="fs-player-footer">${esc(extra)}</span>
+  </button>`;
+ }).join(''):'<p class="fs-empty">Carregue as cartelas dos alunos no painel normal antes de entrar em tela cheia.</p>';
+ const itemMap=new Map(state.items.map(x=>[x.id,x]));
+ $('fsHistoryList').innerHTML=state.draws.length?state.draws.map((id,i)=>({id,i})).reverse().map(({id,i})=>{
+  const item=itemMap.get(id);if(!item)return '';
+  return `<div class="fs-history-item ${i===state.draws.length-1?'is-latest':''}"><span>${esc(item.text)}</span><b>${String(i+1).padStart(2,'0')}ª</b></div>`;
+ }).join(''):'<p class="fs-empty">Nenhuma pedra sorteada até o momento.</p>';
+ if(!$('fsDetail').hidden){
+  const index=Number($('fsDetail').dataset.playerIndex);
+  if(state.players[index])showFullscreenPlayer(index);
+  else showFullscreenOverviewPage();
+ }
+}
+function showFullscreenOverviewPage(){
+ $('fsDetail').hidden=true;
+ $('fsOverviewGrid').hidden=false;
+}
+function showFullscreenPlayer(index){
+ const p=state.players[index];if(!p)return;
+ const ids=new Map(state.items.map(it=>[L.normalize(it.text),it.id]));
+ const drawn=new Set(state.draws),last=state.draws.at(-1);
+ const score=L.computeScores(state.items,state.draws,[p])[0];
+ $('fsDetailName').textContent=p.name;
+ $('fsDetailProgress').textContent=`${score.matched}/${score.total} · ${Math.round(score.percent)}%`;
+ const stones=p.items.map(value=>{
+  const id=ids.get(L.normalize(value));const unknown=!id,matched=drawn.has(id);
+  return `<div class="fs-detail-stone ${unknown?'unknown':id===last?'is-last':matched?'matched':''}" title="${esc(value)}">${esc(value)}</div>`;
+ });
+ const slots=Math.max(state.cardRows*state.cardCols,p.items.length);
+ while(stones.length<slots)stones.push('<div class="fs-detail-stone is-empty" aria-hidden="true"></div>');
+ const grid=$('fsDetailGrid');
+ grid.style.gridTemplateColumns=`repeat(${state.cardCols}, minmax(0,1fr))`;
+ grid.innerHTML=stones.join('');
+ $('fsDetail').dataset.playerIndex=index;
+ $('fsDetail').hidden=false;
+ $('fsOverviewGrid').hidden=true;
+ requestAnimationFrame(fitFullscreenDetailText);
+}
+function fitFullscreenDetailText(){
+ if(!measure)return;
+ $('fsDetailGrid').querySelectorAll('.fs-detail-stone:not(.is-empty)').forEach(el=>{
+  const width=Math.max(20,el.clientWidth-20),height=Math.max(18,el.clientHeight-16);
+  let lo=10,hi=Math.min(29,Math.round(width/5)+11);
+  // Evita deixar a última letra isolada quando um único termo couber com fonte menor.
+  if(!/\s/.test(el.textContent.trim())){
+   while(hi>lo){measure.font=`800 ${hi}px system-ui`;if(measure.measureText(el.textContent).width<=width)break;hi--;}
+  }
+  while(lo<hi){const mid=Math.ceil((lo+hi)/2);measure.font=`800 ${mid}px system-ui`;
+   if(estimateLines(measure,el.textContent,width)*mid*1.12<=height)lo=mid;
+   else hi=mid-1;
+  }
+  el.style.fontSize=lo+'px';
+ });
+}
+function closeFsOverview(){
+ $('fsOverlay').hidden=true;
+ showFullscreenOverviewPage();
+ requestAnimationFrame(fitStoneText);
 }
 function selectMatrixSheet(sheets){return sheets.find(s=>/^(matriz|pedras|movimentos|itens)/i.test(L.normalize(s.name)))||sheets[0]}
 function changeMatrix(rows,mode){
@@ -256,7 +336,25 @@ function bind(){
  $('btnCloseDialog').addEventListener('click',()=>$('playerDialog').close());
  $('playerDialog').addEventListener('click',e=>{if(e.target===$('playerDialog'))$('playerDialog').close()});
  $('btnFullscreen').addEventListener('click',async()=>{
-  try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch(e){notify('Tela cheia não está disponível neste navegador.',true)}
+  try{if(document.fullscreenElement)await document.exitFullscreen();else await $('presentation').requestFullscreen()}
+  catch(e){notify('Tela cheia não está disponível neste navegador.',true)}
+ });
+ $('fsDraw').addEventListener('click',handleDraw);
+ $('fsOverview').addEventListener('click',()=>{
+  showFullscreenOverviewPage();
+  $('fsOverlay').hidden=false;
+  renderFullscreenOverview(L.computeScores(state.items,state.draws,state.players));
+ });
+ $('fsCloseOverview').addEventListener('click',closeFsOverview);
+ $('fsBackDetail').addEventListener('click',showFullscreenOverviewPage);
+ $('fsPlayersList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-fs-player]');if(b)showFullscreenPlayer(Number(b.dataset.fsPlayer));
+ });
+ document.addEventListener('fullscreenchange',()=>{
+  const active=document.fullscreenElement===$('presentation');
+  if(!active)closeFsOverview();
+  $('btnFullscreen').textContent=active?'⛶ Sair da tela cheia':'⛶ Tela cheia';
+  requestAnimationFrame(()=>requestAnimationFrame(fitStoneText));
  });
  $('btnDownloadMatrix').addEventListener('click',()=>download('matriz_bingo.csv',matrixCSV()));
  $('btnSample').addEventListener('click',()=>download('modelo_cartelas_alunos.csv',sampleCSV()));
@@ -270,7 +368,8 @@ function bind(){
   }catch(err){notify('Não foi possível abrir a sessão: '+err.message,true)}finally{e.target.value=''}
  });
  let resizeRaf;
- new ResizeObserver(()=>{cancelAnimationFrame(resizeRaf);resizeRaf=requestAnimationFrame(fitStoneText)}).observe($('matrixScroll'));
+ const ro=new ResizeObserver(()=>{cancelAnimationFrame(resizeRaf);resizeRaf=requestAnimationFrame(fitStoneText)});
+ ro.observe($('matrixScroll'));ro.observe($('fsMatrixScroll'));
 }
 loadStored();bind();render();
 })();
