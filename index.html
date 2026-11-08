@@ -7,6 +7,7 @@
   <title>Bingo Inteligente — Matriz e Cartelas</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="fullscreen.css">
+  <link rel="stylesheet" href="winners.css">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -155,6 +156,22 @@
         </section>
       </div>
     </div>
+    <!-- Aviso de vitória dentro do elemento em tela cheia (não encerra a projeção). -->
+    <div class="win-notice" id="fsWinNotice" role="dialog" aria-modal="true" aria-labelledby="fsWinHeading" hidden>
+      <div class="win-card" role="document">
+        <span class="win-spark" aria-hidden="true">✦</span>
+        <p class="win-eyebrow">CONQUISTA DESBLOQUEADA</p>
+        <div class="win-trophy" aria-hidden="true">★</div>
+        <h2 id="fsWinHeading">BINGO!</h2>
+        <p class="win-subheading" id="fsWinSummary"></p>
+        <div class="win-people" id="fsWinPeople" aria-label="Participantes com cartela completa"></div>
+        <p class="win-context" id="fsWinContext"></p>
+        <div class="win-buttons">
+          <button class="win-btn win-btn-primary" id="fsWinClose" type="button">CONTINUAR SORTEIO</button>
+          <button class="win-btn win-btn-secondary" id="fsWinResults" type="button">VER CLASSIFICAÇÃO</button>
+        </div>
+      </div>
+    </div>
   </section>
   <footer class="page-footer">BINGO INTELIGENTE <span>•</span> A atividade funciona localmente no navegador. Os dados dos alunos não são enviados a servidores.</footer>
 
@@ -162,6 +179,23 @@
     <div class="modal-head"><div><p class="eyebrow">ACOMPANHAMENTO INDIVIDUAL</p><h2 id="dialogTitle">Cartela do participante</h2></div><button class="btn btn-icon" id="btnCloseDialog" title="Fechar">×</button></div>
     <div id="dialogBody"></div>
   </dialog>
+  <!-- Aviso equivalente para o modo normal, fora do elemento de projeção. -->
+  <div class="win-notice" id="winNotice" role="dialog" aria-modal="true" aria-labelledby="winHeading" hidden>
+    <div class="win-card" role="document">
+      <span class="win-spark" aria-hidden="true">✦</span>
+      <p class="win-eyebrow">CONQUISTA DESBLOQUEADA</p>
+      <div class="win-trophy" aria-hidden="true">★</div>
+      <h2 id="winHeading">BINGO!</h2>
+      <p class="win-subheading" id="winSummary"></p>
+      <div class="win-people" id="winPeople" aria-label="Participantes com cartela completa"></div>
+      <p class="win-context" id="winContext"></p>
+      <div class="win-buttons">
+        <button class="win-btn win-btn-primary" id="winClose" type="button">CONTINUAR SORTEIO</button>
+        <button class="win-btn win-btn-secondary" id="winResults" type="button">VER CLASSIFICAÇÃO</button>
+      </div>
+    </div>
+  </div>
+  <div class="sr-only" id="winAnnouncer" aria-live="assertive" aria-atomic="true"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="vendor/jszip.min.js"></script>
   <script src="logic.js"></script>

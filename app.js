@@ -244,12 +244,57 @@ async function uploadPlayers(file){try{
  $('playersNote').textContent=`✓ ${file.name} · ${players.length} participantes`;
  notify(`Importadas ${players.length} cartelas.${wrong.length?' Atenção: '+wrong.length+' ocorrências de pedras fora da matriz.':''}`,wrong.length>0);
 }catch(e){notify(e.message,true)}finally{$('playersFile').value=''}}
-function handleDraw(){const next=L.takeDraw(state);if(!next)return notify('Todas as pedras já foram sorteadas.');
+// V3: só anuncia as cartelas completadas NESTA pedra. Empates entram no mesmo aviso.
+function announceWinners(winners){
+ if(!winners.length)return;
+ const multiple=winners.length>1;
+ const summary=multiple
+  ?`${winners.length} participantes completaram suas cartelas no mesmo sorteio!`
+  :'Uma cartela foi completada!';
+ const last=state.items.find(it=>it.id===state.draws.at(-1));
+ const lastText=last?.text||'—';
+ const lines=winners.map(p=>`<div class="win-person"><span class="win-position">${p.rank}º</span><span class="win-person-info"><strong class="win-person-name">${esc(p.name)}</strong><span class="win-person-desc">Cartela completa · ${p.matched}/${p.total} acertos</span></span><span class="win-check" aria-hidden="true">✓</span></div>`).join('');
+ for(const prefix of ['', 'fs']){
+  const root=$(prefix?'fsWinNotice':'winNotice');
+  $(prefix?'fsWinSummary':'winSummary').textContent=summary;
+  $(prefix?'fsWinPeople':'winPeople').innerHTML=lines;
+  $(prefix?'fsWinContext':'winContext').textContent=`${state.draws.length}ª pedra sorteada: ${lastText}`;
+  root.hidden=prefix?! (document.fullscreenElement===$('presentation')):(document.fullscreenElement===$('presentation'));
+ }
+ $('winAnnouncer').textContent=`Bingo! ${winners.map(p=>p.rank+'º lugar: '+p.name).join('; ')}. ${summary}`;
+ // Destaca o aviso na própria tela cheia, sem chamar exitFullscreen().
+ const isFs=document.fullscreenElement===$('presentation');
+ (isFs?$('fsWinClose'):$('winClose')).focus({preventScroll:true});
+}
+function closeWinnerNotice(){
+ const wasFs=!$('fsWinNotice').hidden;
+ const wasNormal=!$('winNotice').hidden;
+ $('fsWinNotice').hidden=true;$('winNotice').hidden=true;
+ if(wasFs&&document.fullscreenElement===$('presentation'))$('fsDraw').focus({preventScroll:true});
+ else if(wasNormal)$('btnDraw').focus({preventScroll:true});
+}
+function showWinnerResults(){
+ const isFs=document.fullscreenElement===$('presentation');
+ closeWinnerNotice();
+ if(isFs){
+  showFullscreenOverviewPage();$('fsOverlay').hidden=false;
+  renderFullscreenOverview(L.computeScores(state.items,state.draws,state.players));
+  $('fsCloseOverview').focus({preventScroll:true});
+ }else{
+  $('playerSearch').value='';renderPlayers(L.computeScores(state.items,state.draws,state.players));
+  $('playersList').scrollIntoView({block:'center',behavior:'smooth'});
+ }
+}
+function handleDraw(){
+ const next=L.takeDraw(state);if(!next)return notify('Todas as pedras já foram sorteadas.');
  state.draws.push(next.id);state.queue=next.queue;render();
+ const newWinners=L.computeScores(state.items,state.draws,state.players)
+  .filter(p=>p.complete&&p.finishedAt===state.draws.length);
+ if(newWinners.length)announceWinners(newWinners);
 }
 function handleRestart(){if(!state.draws.length){notify('Ainda não há pedras sorteadas.');return}
  if(!confirm('Reiniciar todos os sorteios? A matriz e as cartelas dos alunos serão mantidas.'))return;
- state.draws=[];state.queue=[];render();notify('Sorteios reiniciados. Participantes preservados.');}
+ state.draws=[];state.queue=[];closeWinnerNotice();render();notify('Sorteios reiniciados. Participantes preservados.');}
 function download(name,text,mime){
  const blob=new Blob([text],{type:mime||'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -302,6 +347,20 @@ function fitDetailText(){
  });
 }
 function bind(){
+ for(const name of ['winClose','fsWinClose'])$(name).addEventListener('click',closeWinnerNotice);
+ for(const name of ['winResults','fsWinResults'])$(name).addEventListener('click',showWinnerResults);
+ // Bloqueia interação com a matriz enquanto o anúncio estiver aberto.
+ document.addEventListener('keydown',e=>{
+  const current=!$('fsWinNotice').hidden?$('fsWinNotice'):!$('winNotice').hidden?$('winNotice'):null;
+  if(!current)return;
+  if(e.key==='Escape'){e.preventDefault();closeWinnerNotice();return}
+  if(e.key==='Tab'){
+   const focusables=[...current.querySelectorAll('button:not([disabled])')];
+   const i=focusables.indexOf(document.activeElement);
+   if(e.shiftKey&&(i===0||i===-1)){e.preventDefault();focusables.at(-1)?.focus()}
+   else if(!e.shiftKey&&(i===focusables.length-1||i===-1)){e.preventDefault();focusables[0]?.focus()}
+  }
+ },true);
  $('btnDraw').addEventListener('click',handleDraw);
  $('btnRestart').addEventListener('click',handleRestart);
  $('matrixFile').addEventListener('change',e=>{if(e.target.files?.[0])uploadMatrix(e.target.files[0])});
@@ -352,6 +411,8 @@ function bind(){
  });
  document.addEventListener('fullscreenchange',()=>{
   const active=document.fullscreenElement===$('presentation');
+  // Caso a projeção seja encerrada pelo navegador, não permanece modal inacessível.
+  closeWinnerNotice();
   if(!active)closeFsOverview();
   $('btnFullscreen').textContent=active?'⛶ Sair da tela cheia':'⛶ Tela cheia';
   requestAnimationFrame(()=>requestAnimationFrame(fitStoneText));

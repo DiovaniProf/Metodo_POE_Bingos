@@ -1,6 +1,22 @@
-# BINGO INTELIGENTE — versão web 2.0
+# BINGO INTELIGENTE — versão web 3.0
 
 Aplicação educacional com **HTML, CSS e JavaScript**, sem necessidade de Python, banco de dados ou internet para executar. A biblioteca **JSZip** (incluída em `vendor/`) lê arquivos Excel `.xlsx` diretamente no navegador.
+
+## Novidade da versão 3.0 — aviso automático de cartela completa
+
+Sempre que o sorteio atual completar uma ou mais cartelas de participantes, o Bingo apresenta imediatamente um aviso **BINGO!**, sem necessidade de o professor verificar os resultados manualmente.
+
+- Mostra **nome**, **colocação** e **acertos** de cada participante que concluiu naquele sorteio.
+- Se dois ou mais terminarem **na mesma pedra**, todos aparecem juntos com a mesma colocação (por exemplo: Ana 1º; Pedro 2º; João 2º).
+- Exibe qual pedra provocou a conclusão e o número do sorteio.
+- Inclui botões **CONTINUAR SORTEIO** e **VER CLASSIFICAÇÃO**.
+- Funciona tanto no painel normal quanto **dentro da própria tela cheia**, preservando o modo de projeção.
+- O aviso não aparece novamente para quem já ganhou; só ocorre diante de uma **nova conclusão**.
+- O professor pode fechar o aviso e prosseguir; as colocações e as cartelas completas permanecem na classificação.
+
+**Teste rápido:** importe `modelos/matriz_demo_vitoria.csv` como matriz, depois `modelos/cartelas_demo_vitoria.csv` como participantes. Ao sortear Barroco, Maria completa primeiro. Ao sortear Caravaggio, Ana, Pedro e João completam no mesmo sorteio, ficando todos em 2º. O terceiro sorteio não gera novo aviso.
+
+**Como atualizar da V2:** substitua pelo conteúdo completo do novo ZIP; o arquivo adicional `winners.css` precisa ficar na mesma pasta que `index.html`, `app.js`, `logic.js`, `styles.css` e `fullscreen.css`. O armazenamento local e os arquivos JSON da V2 continuam compatíveis com a V3.
 
 ## Novidade da versão 2.0 — projeção em tela cheia
 
@@ -119,8 +135,10 @@ Não há sincronização automática entre aparelhos nem uma área com login de 
 bingo_web_arte/
 ├── index.html                Página principal
 ├── styles.css                Estilo, cores e responsividade
-├── app.js                    Interface, importações e classificação
+├── app.js                    Interface, importações, classificação e aviso de vitória
 ├── logic.js                  Sorteios e conferência das cartelas
+├── fullscreen.css            Projeção em tela cheia
+├── winners.css               Pop-up de vencedores e empates
 ├── vendor/
 │   ├── jszip.min.js          Leitura de XLSX sem internet
 │   └── LICENCA_JSZIP.md
@@ -130,12 +148,14 @@ bingo_web_arte/
     ├── matriz_numeros_primos.xlsx
     ├── matriz_numeros_primos.csv
     ├── modelo_cartelas_alunos.xlsx
-    └── modelo_cartelas_alunos.csv
+    ├── modelo_cartelas_alunos.csv
+    ├── matriz_demo_vitoria.csv
+    └── cartelas_demo_vitoria.csv
 ```
 
 ## 8. Publicação no GitHub Pages
 
-1. Crie um repositório e envie `index.html`, `styles.css`, `app.js`, `logic.js`, a pasta `vendor/` e, se desejar, a pasta `modelos/`.
+1. Crie um repositório e envie `index.html`, `styles.css`, `fullscreen.css`, `winners.css`, `app.js`, `logic.js`, a pasta `vendor/` e, se desejar, a pasta `modelos/`.
 2. Em **Settings → Pages**, escolha publicar a partir da branch principal e da pasta raiz.
 3. Abra o endereço gerado após a publicação. O site funciona em celulares, notebooks e computadores.
 
