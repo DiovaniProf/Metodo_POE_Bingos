@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#081428">
-  <title>Bingo Inteligente — Matriz e Cartelas</title>
+  <title>Bingo Inteligente V7 — Excel XLSX + XLSM</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="fullscreen.css">
   <link rel="stylesheet" href="winners.css">
@@ -41,15 +41,23 @@
       <div class="section-title"><span class="num">01</span><h2>Painel de controle</h2></div>
       <div class="panel-body">
         <div class="field-group">
-          <label class="field-label" for="matrixFile">Carregar matriz <small>(.xlsx ou .csv)</small></label>
-          <label class="upload-zone" for="matrixFile"><span class="upload-icon">▦</span><strong>Selecionar planilha da matriz</strong><small>Palavras, números ou grupos em colunas</small></label>
-          <input type="file" id="matrixFile" accept=".xlsx,.csv,text/csv" hidden>
-          <span class="file-note" id="matrixNote">Exemplo inicial: 10 movimentos + 20 representantes</span>
+          <label class="field-label" for="matrixFile">Carregar matriz <small>(.xlsx, .xlsm ou .csv)</small></label>
+          <label class="upload-zone" for="matrixFile"><span class="upload-icon">▦</span><strong>Selecionar planilha da matriz</strong><small>Importe XLSX ou XLSM: dicionário e cartelas no mesmo arquivo</small></label>
+          <input type="file" id="matrixFile" accept=".xlsx,.xlsm,.csv,text/csv" hidden>
+          <span class="file-note" id="matrixNote">Exemplo inicial: 10 movimentos + 20 representantes; ou carregue o modelo flexível</span>
+          <a class="btn btn-link" href="modelos/Modelo_Bingo_Flexivel_V7.xlsx" download>↓ Modelo flexível: 1, 2, 3 pedras ou números</a>
+          <p class="helper">Arquivos <strong>.xlsx</strong> e <strong>.xlsm</strong> são verificados pelo formato interno, não apenas pela extensão. O bingo lê dados e fórmulas armazenadas, mas nunca executa macros VBA.</p>
         </div>
         <div class="field-group">
           <label class="field-label" for="drawMode">Regra de sorteio</label>
           <select id="drawMode" class="control-input"><option value="groups">Vinculado: 1º item + demais da linha</option><option value="individual">Individual: todas as pedras aleatórias</option></select>
-          <p class="helper">No modo vinculado, o primeiro item do grupo sai antes dos demais. Em cada grupo, a sequência é preservada.</p>
+          <p class="helper">No modo vinculado, o 1º termo do par ou trio sai antes dos demais. Para bingo numérico ou uma palavra, use sorteio individual.</p>
+        </div>
+        <div class="field-group display-layout-group">
+          <label class="field-label" for="layoutMode">Organização visual das pedras na matriz</label>
+          <select id="layoutMode" class="control-input" aria-describedby="layoutModeHelp"></select>
+          <button class="btn btn-soft full-width" id="btnReshuffle" type="button" hidden>⤨ REEMBARALHAR MATRIZ</button>
+          <p class="helper" id="layoutModeHelp">A aparência muda, mas a sequência vinculada de sorteio é preservada.</p>
         </div>
         <div class="field-group">
           <label class="field-label">Dimensões da matriz</label>
@@ -93,15 +101,15 @@
       <div class="matrix-scroll" id="matrixScroll">
         <div class="matrix-grid" id="matrixGrid" aria-label="Cartela matriz"></div>
       </div>
-      <div class="matrix-footer"><span id="matrixDetails">30 pedras • 10 grupos</span><span>Textos ajustados ao tamanho de cada célula</span></div>
+      <div class="matrix-footer"><span id="matrixDetails">30 pedras • 10 grupos</span><span id="matrixOrderLabel">Grupos em sequência · sorteio independente da posição</span></div>
     </section>
 
     <aside class="panel players-panel">
       <div class="section-title"><span class="num">03</span><h2>Cartelas dos alunos</h2></div>
       <div class="panel-body">
         <div class="field-group">
-          <label class="upload-zone upload-compact" for="playersFile"><span class="upload-icon">⇪</span><strong>Importar planilha de participantes</strong><small>Formato por linha, por pedra ou por abas</small></label>
-          <input type="file" id="playersFile" accept=".xlsx,.csv,text/csv" hidden>
+          <label class="upload-zone upload-compact" for="playersFile"><span class="upload-icon">⇪</span><strong>Importar planilha de participantes</strong><small>Aceita XLSX e XLSM; macros não são executadas. Valida códigos 01–09</small></label>
+          <input type="file" id="playersFile" accept=".xlsx,.xlsm,.csv,text/csv" hidden>
           <span class="file-note" id="playersNote">Nenhuma planilha carregada</span>
           <button id="btnSample" class="btn btn-link" type="button">↓ Baixar modelo de cartelas CSV</button>
         </div>

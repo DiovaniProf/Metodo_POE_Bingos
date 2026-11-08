@@ -2,9 +2,9 @@
 'use strict';
 const L=window.BingoLogic;
 const $=id=>document.getElementById(id);
-const STORAGE_KEY='bingo_inteligente_v1';
+const STORAGE_KEY='bingo_inteligente_v1'; // mantém compatibilidade com sessões anteriores
 const initialRows=L.ART_GROUPS.map(row=>[...row]);
-let state={sourceRows:initialRows,mode:'groups',items:L.defaultItems(),draws:[],queue:[],players:[],gridRows:10,gridCols:3,autoLayout:true,cardRows:4,cardCols:5,cardAuto:true};
+let state={sourceRows:initialRows,mode:'groups',items:L.defaultItems(),draws:[],queue:[],players:[],gridRows:10,gridCols:3,autoLayout:true,cardRows:4,cardCols:5,cardAuto:true,layoutMode:'together',layoutSeed:123456789};
 let saved=false;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 let toastTimer;
@@ -20,20 +20,53 @@ function validateState(input){
  const players=L.parsePlayers([{name:'Cartelas',rows:[['Participante','Pedra 1'],...input.players.map(p=>[p.name,...p.items])]}]);
  return {sourceRows:rows,mode,items,draws,queue,players,
   gridRows:Math.max(1,Math.min(100,Number(input.gridRows)||10)),gridCols:Math.max(1,Math.min(20,Number(input.gridCols)||3)),autoLayout:input.autoLayout!==false,
-  cardRows:Math.max(1,Math.min(100,Number(input.cardRows)||4)),cardCols:Math.max(1,Math.min(20,Number(input.cardCols)||5)),cardAuto:input.cardAuto!==false};
+  cardRows:Math.max(1,Math.min(100,Number(input.cardRows)||4)),cardCols:Math.max(1,Math.min(20,Number(input.cardCols)||5)),cardAuto:input.cardAuto!==false,
+  layoutMode:['together','two','shuffled'].includes(input.layoutMode)?input.layoutMode:'together',
+  layoutSeed:(Number(input.layoutSeed)>>>0)||123456789};
 }
 function loadStored(){try{const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(data){state=validateState(data);$('saveStatus').textContent='Sessão recuperada'}}catch(e){console.warn('Dados locais não recuperados:',e)}}
+function maximumGroupSize(){
+ // Nos sorteios individuais, cada pedra é independente; na modalidade
+ // vinculada, cada linha do dicionário continua sendo seu próprio grupo.
+ if(state.mode!=='groups')return 1;
+ return Math.max(1,...state.sourceRows.map(row=>row.filter(Boolean).length));
+}
+function updateLayoutOptions(){
+ const size=maximumGroupSize();
+ const options=size>=3?
+  [['together','Trio em sequência — 3 palavras juntas'],['two','Duas palavras próximas — 3ª separada'],['shuffled','Trio embaralhado — posições aleatórias']]:
+  size===2?
+  [['together','Par lado a lado — 2 palavras juntas'],['shuffled','Par embaralhado — posições aleatórias']]:
+  [['together','Pedras na ordem do dicionário'],['shuffled','Pedras embaralhadas na matriz']];
+ if(size<3&&state.layoutMode==='two')state.layoutMode='together';
+ const control=$('layoutMode');
+ const code=options.map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('');
+ if(control.innerHTML!==code)control.innerHTML=code;
+ control.value=state.layoutMode;
+ $('btnReshuffle').hidden=state.layoutMode!=='shuffled';
+ const help=state.layoutMode==='two'?
+  'Nos trios, as duas primeiras palavras ficam lado a lado; a terceira aparece em outra região. As três continuam sendo sorteadas, uma por vez, na ordem do dicionário.':
+  state.layoutMode==='shuffled'?
+  size===1?'Apenas a disposição visual muda. Os números ou nomes continuam sendo sorteados individualmente.':'Apenas as posições mudam. O sorteio vinculado mantém 1ª → 2ª → 3ª palavra, independentemente de onde apareçam na matriz.':
+  size===1?'Pedras exibidas na ordem original. O sorteio individual continua aleatório.':'As palavras de cada par/trio aparecem próximas, na ordem do dicionário. A cada clique, o sorteio segue a sequência do grupo.';
+ $('layoutModeHelp').textContent=help;
+}
+function matrixVisualSlots(){
+ return L.visualSlots(state.items,state.gridCols,state.layoutMode,state.layoutSeed,state.mode==='groups');
+}
 function setControls(){
+ updateLayoutOptions();
  $('drawMode').value=state.mode;$('gridRows').value=state.gridRows;$('gridCols').value=state.gridCols;$('autoLayout').checked=state.autoLayout;
  $('cardRows').value=state.cardRows;$('cardCols').value=state.cardCols;$('cardAuto').checked=state.cardAuto;
 }
 function adjustLayout(){
- const length=state.items.length,cols=Math.max(1,state.gridCols);
+ const length=matrixVisualSlots().length,cols=Math.max(1,state.gridCols);
  const required=Math.ceil(length/cols);
  if(state.autoLayout)state.gridRows=required;
- else if(state.gridRows*cols<length){state.gridRows=required;notify('O número de linhas foi ampliado para que nenhuma pedra fique oculta.')}
+ else if(state.gridRows*cols<length){state.gridRows=required;notify('Linhas ampliadas para exibir as pedras e manter os grupos juntos.')}
  $('gridRows').value=state.gridRows;
- $('layoutHint').textContent=`${state.gridRows} linhas × ${state.gridCols} colunas · ${state.gridRows*state.gridCols} posições`;
+ const spacers=matrixVisualSlots().filter(x=>x===null).length;
+ $('layoutHint').textContent=`${state.gridRows} linhas × ${state.gridCols} colunas · ${state.items.length} pedras`+(spacers?` · ${spacers} espaços para alinhar grupos`: '');
 }
 function adjustCardLayout(){
  const maxCount=state.players.length?Math.max(1,...state.players.map(p=>p.items.length)):20;
@@ -43,6 +76,7 @@ function adjustCardLayout(){
  $('cardHint').textContent=`${state.cardRows} linhas × ${state.cardCols} colunas · ${state.cardRows*state.cardCols} posições`;
 }
 function render(){
+ updateLayoutOptions();
  adjustLayout();adjustCardLayout();setControls();
  const s=L.computeScores(state.items,state.draws,state.players);
  $('statTotal').textContent=state.items.length;
@@ -64,11 +98,16 @@ function render(){
 }
 function renderMatrix(){
  const drawn=new Set(state.draws),last=state.draws.at(-1),slots=state.gridRows*state.gridCols;
- const cells=Array.from({length:slots},(_,i)=>{
-  const it=state.items[i];
-  if(!it)return '<div class="stone stone-empty" aria-hidden="true"></div>';
-  const className=it.id===last?'is-last':drawn.has(it.id)?'is-drawn':'';
-  return `<div class="stone ${className}" title="${esc(it.text)}"><span class="stone-index">${String(i+1).padStart(2,'0')}</span><span class="stone-label">${esc(it.text)}</span></div>`;
+ const layout=matrixVisualSlots(), byId=new Map(state.items.map((it,i)=>[it.id,{it,index:i+1}]));
+ const cells=Array.from({length:slots},(_,position)=>{
+  const id=layout[position];
+  if(!id)return '<div class="stone stone-empty" aria-hidden="true"></div>';
+  const entry=byId.get(id);if(!entry)return '<div class="stone stone-empty" aria-hidden="true"></div>';
+  const {it,index}=entry;
+  const className=id===last?'is-last':drawn.has(id)?'is-drawn':'';
+  // O índice representa a identidade original da pedra, nunca sua posição
+  // depois do embaralhamento. A fila de sorteio usa apenas it.id.
+  return `<div class="stone ${className}" title="${esc(it.text)}"><span class="stone-index">${String(index).padStart(2,'0')}</span><span class="stone-label">${esc(it.text)}</span></div>`;
  }).join('');
  for(const id of ['matrixGrid','fsMatrixGrid']){
   const grid=$(id);grid.style.gridTemplateColumns=`repeat(${state.gridCols}, minmax(0,1fr))`;
@@ -77,6 +116,9 @@ function renderMatrix(){
  $('fsMatrixGrid').style.setProperty('--fs-rows',state.gridRows);
  const groups=new Set(state.items.map(x=>x.group));
  $('matrixDetails').textContent=`${state.items.length} pedras • ${state.mode==='groups'?groups.size+' grupos':'sorteios individuais'}`;
+ const drawLabel=state.mode==='groups'?'sorteio vinculado preservado':'sorteio individual preservado';
+ $('matrixOrderLabel').textContent=(state.layoutMode==='shuffled'?'Matriz embaralhada':
+  state.layoutMode==='two'?'Duas juntas + terceira separada':'Grupos/pedras em sequência')+' · '+drawLabel;
  requestAnimationFrame(fitStoneText);
 }
 function estimateLines(ctx,text,maxWidth){
@@ -223,25 +265,31 @@ function changeMatrix(rows,mode){
  const originalCols=Math.max(1,...effective.map(r=>r.filter(Boolean).length));
  state.gridCols=originalCols===1?Math.min(10,Math.max(3,Math.ceil(Math.sqrt(items.length)))):Math.min(20,originalCols);
  if(items.length<state.gridCols)state.gridCols=items.length;
- state.autoLayout=true;state.gridRows=Math.ceil(items.length/state.gridCols);
+ state.autoLayout=true;state.layoutMode='together';state.layoutSeed=(Math.floor(Math.random()*4294967296)>>>0)||1;state.gridRows=Math.ceil(items.length/state.gridCols);
  render();
  return true;
 }
 async function uploadMatrix(file){try{
- const sheets=await L.parseFile(file);const sheet=selectMatrixSheet(sheets);
- const suggestedMode=L.inferMatrixMode(sheet.rows);
- if(changeMatrix(sheet.rows,suggestedMode)){
-  $('matrixNote').textContent=`✓ ${file.name} · ${state.items.length} pedras importadas`;
-  notify(`Matriz importada: ${state.items.length} pedras. ${suggestedMode==='groups'?'Grupos identificados pelas linhas.':'Sorteio individual.'}`);
+ const sheets=await L.parseFile(file);const flex=L.readFlexibleWorkbook(sheets);
+ const sheet=flex?null:selectMatrixSheet(sheets);
+ const rows=flex?flex.sourceRows:sheet.rows;
+ const suggestedMode=flex?flex.mode:L.inferMatrixMode(rows);
+ const tentativeItems=flex?flex.items:L.groupsToItems(rows,suggestedMode);
+ const coded=flex?flex.players:(L.hasCodedCards(sheets)?L.parsePlayers(sheets,tentativeItems):null);
+ if(changeMatrix(rows,suggestedMode)){
+  if(coded!==null){state.players=coded;render();}
+  $('matrixNote').textContent=`✓ ${file.name} · ${state.items.length} pedras · formato validado${/\.xlsm$/i.test(file.name)?' · macros não executadas':''}`;
+  notify(`Matriz importada: ${state.items.length} pedras.${coded!==null?' '+coded.length+' cartelas sincronizadas.':''}`);
  }
 }catch(e){notify(e.message,true)}finally{$('matrixFile').value=''}}
 async function uploadPlayers(file){try{
- const sheets=await L.parseFile(file),players=L.parsePlayers(sheets);
+ const sheets=await L.parseFile(file),players=L.parsePlayers(sheets,state.items);
+ if(!players.length)throw new Error('A planilha ainda não contém cartelas preenchidas. Digite os códigos e importe novamente.');
  if(state.players.length&&!confirm('Substituir a lista atual de participantes pelas cartelas importadas?'))return;
  state.players=players;render();
  const keys=new Set(state.items.map(i=>L.normalize(i.text)));
  const wrong=players.flatMap(p=>p.items.filter(i=>!keys.has(L.normalize(i))));
- $('playersNote').textContent=`✓ ${file.name} · ${players.length} participantes`;
+ $('playersNote').textContent=`✓ ${file.name} · ${players.length} participantes · formato validado${/\.xlsm$/i.test(file.name)?' · macros não executadas':''}`;
  notify(`Importadas ${players.length} cartelas.${wrong.length?' Atenção: '+wrong.length+' ocorrências de pedras fora da matriz.':''}`,wrong.length>0);
 }catch(e){notify(e.message,true)}finally{$('playersFile').value=''}}
 // V3: só anuncia as cartelas completadas NESTA pedra. Empates entram no mesmo aviso.
@@ -365,6 +413,16 @@ function bind(){
  $('btnRestart').addEventListener('click',handleRestart);
  $('matrixFile').addEventListener('change',e=>{if(e.target.files?.[0])uploadMatrix(e.target.files[0])});
  $('playersFile').addEventListener('change',e=>{if(e.target.files?.[0])uploadPlayers(e.target.files[0])});
+ $('layoutMode').addEventListener('change',e=>{
+  state.layoutMode=e.target.value;
+  // Mudar a organização visual nunca pode reiniciar as pedras sorteadas.
+  render();
+  notify('Organização da matriz alterada. Histórico e sequência de sorteio preservados.');
+ });
+ $('btnReshuffle').addEventListener('click',()=>{
+  state.layoutSeed=(Math.floor(Math.random()*4294967296)>>>0)||1;
+  render();notify('As posições foram reembaralhadas sem alterar o sorteio.');
+ });
  $('drawMode').addEventListener('change',e=>{
   if(state.draws.length&&!confirm('Alterar a regra reinicia os sorteios. Deseja continuar?')){e.target.value=state.mode;return}
   state.mode=e.target.value;state.items=L.groupsToItems(state.sourceRows,state.mode);state.draws=[];state.queue=[];render();
